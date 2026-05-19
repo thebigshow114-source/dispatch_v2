@@ -3,932 +3,1039 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kitchen Plan Extractor</title>
+  <title>KPX · Kitchen Plan Extractor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            bg:      '#0b0d14',
-            surface: '#111320',
-            card:    '#181b27',
-            card2:   '#1e2133',
-            border:  '#252838',
-            border2: '#2e3248',
-            tx:      '#e2e8f4',
-            tx2:     '#8b96b0',
-            tx3:     '#4e5870',
-            accent:  '#7c6dfa',
-            accentH: '#6b5cf0',
-          },
-          animation: {
-            'fade-up': 'fadeUp .35s ease both',
-            'pulse-dot': 'pulseDot 1.4s ease-in-out infinite',
-            'spin-slow': 'spin .65s linear infinite',
-          },
-          keyframes: {
-            fadeUp: {
-              from: { opacity: '0', transform: 'translateY(12px)' },
-              to:   { opacity: '1', transform: 'translateY(0)' },
-            },
-            pulseDot: {
-              '0%, 100%': { opacity: '1' },
-              '50%':      { opacity: '.3' },
-            },
-          },
-        }
-      }
-    };
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
+    :root {
+      --bg:          #060710;
+      --surface:     #0c0f1e;
+      --card:        #10142a;
+      --card2:       #151930;
+      --glass:       rgba(10,13,28,0.82);
+      --border:      rgba(255,255,255,0.055);
+      --border2:     rgba(255,255,255,0.1);
+      --text:        #f0f4ff;
+      --text2:       #8892b0;
+      --text3:       #3d4966;
+      --accent:      #7c5cfc;
+      --accent2:     #5b8af7;
+      --accent-glow: rgba(124,92,252,0.4);
+      --accent-bg:   rgba(124,92,252,0.07);
+      --green:       #0fba81;
+      --green-glow:  rgba(15,186,129,0.35);
+      --amber:       #f5a623;
+      --red:         #f05252;
+      --font: 'Inter', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --ease: cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 14px; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── MESH BACKGROUND ─── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 90% 60% at 10% -10%, rgba(124,92,252,.18) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 90% 100%, rgba(91,138,247,.12) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(15,186,129,.04) 0%, transparent 60%);
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.04) 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 70%, rgba(255,255,255,.03) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 90%, rgba(255,255,255,.03) 0%, transparent 100%);
+    }
+
+    /* ─── LAYOUT ─── */
+    .layout {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      background: var(--glass);
+      backdrop-filter: blur(32px) saturate(1.5);
+      -webkit-backdrop-filter: blur(32px) saturate(1.5);
+      border-right: 1px solid var(--border2);
+      position: sticky; top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 30px 22px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+
+    /* Logo */
+    .logo { display: flex; align-items: center; gap: 13px; }
+    .logo-mark {
+      width: 42px; height: 42px;
+      border-radius: 13px;
+      background: linear-gradient(145deg, #8b6bfd, #5b8af7);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 14px; font-weight: 600; color: #fff;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset, 0 0 30px rgba(124,92,252,.45), 0 6px 20px rgba(0,0,0,.5);
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+    .logo-copy { display: flex; flex-direction: column; gap: 1px; }
+    .logo-name {
+      font-size: 15px; font-weight: 700; letter-spacing: -.4px;
+      background: linear-gradient(90deg, #e8edff, #a0aec0);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo-tag {
+      font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text3);
+    }
+    .version-pill {
+      margin-left: auto; flex-shrink: 0;
+      font-family: var(--mono); font-size: 9px;
+      padding: 2px 8px; border-radius: 999px;
+      border: 1px solid var(--border2); color: var(--text3);
+      letter-spacing: .5px;
+    }
+
+    /* Sidebar group label */
+    .sb-group { display: flex; flex-direction: column; gap: 10px; }
+    .sb-label {
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text3);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sb-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* API Key */
+    .key-field { position: relative; }
+    .key-input {
+      width: 100%;
+      background: rgba(255,255,255,.035);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 10px 42px 10px 14px;
+      font-family: var(--mono); font-size: 12px; color: var(--text);
+      transition: border-color .2s, box-shadow .2s, background .2s;
+      letter-spacing: .3px;
+    }
+    .key-input::placeholder { color: var(--text3); font-size: 11px; letter-spacing: 0; }
+    .key-input:focus {
+      outline: none;
+      border-color: rgba(124,92,252,.6);
+      background: rgba(124,92,252,.05);
+      box-shadow: 0 0 0 3px rgba(124,92,252,.12);
+    }
+    .key-toggle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text3);
+      cursor: pointer; padding: 4px; line-height: 1; font-size: 14px;
+      transition: color .15s;
+    }
+    .key-toggle:hover { color: var(--text2); }
+    .key-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+    .key-hint { font-size: 11px; color: var(--text3); }
+    .key-hint a { color: var(--accent); text-decoration: none; }
+    .key-hint a:hover { text-decoration: underline; }
+    .key-saved {
+      display: none; align-items: center; gap: 4px;
+      font-family: var(--mono); font-size: 9px; color: var(--green);
+    }
+    .key-saved.show { display: flex; }
+
+    /* Drop zone */
+    .drop-zone {
+      position: relative;
+      border-radius: 14px;
+      padding: 30px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(255,255,255,.025);
+      border: 1px dashed var(--border2);
+      transition: all .25s var(--ease);
+      overflow: hidden;
+    }
+    .drop-zone:hover { border-color: rgba(124,92,252,.5); background: var(--accent-bg); border-style: solid; }
+    .drop-zone.over  { border-color: var(--accent); background: rgba(124,92,252,.1); border-style: solid; box-shadow: 0 0 30px rgba(124,92,252,.15) inset; }
+    .drop-zone.ready { border-color: var(--green); background: rgba(15,186,129,.06); border-style: solid; }
+    .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .dz-icon-wrap {
+      width: 56px; height: 56px;
+      margin: 0 auto 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      transition: transform .3s var(--ease), background .25s;
+    }
+    .drop-zone:hover .dz-icon-wrap { transform: translateY(-3px); background: rgba(124,92,252,.1); }
+    .drop-zone.ready .dz-icon-wrap { background: rgba(15,186,129,.12); border-color: rgba(15,186,129,.25); }
+    .dz-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 3px; }
+    .dz-hint { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+    .dz-file {
+      display: none; margin-top: 12px;
+      padding: 8px 12px;
+      background: rgba(15,186,129,.08);
+      border: 1px solid rgba(15,186,129,.2);
+      border-radius: 8px;
+    }
+    .dz-file.show { display: block; }
+    .dz-name { font-family: var(--mono); font-size: 11px; color: var(--green); word-break: break-all; line-height: 1.5; }
+    .dz-size { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+    /* Extract button */
+    .run-btn {
+      width: 100%; position: relative; overflow: hidden;
+      padding: 13px 16px;
+      border: none; border-radius: 11px;
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      color: #fff; cursor: pointer;
+      background: linear-gradient(135deg, #8b6bfd 0%, #5b8af7 100%);
+      box-shadow: 0 4px 24px rgba(124,92,252,.45), 0 1px 0 rgba(255,255,255,.15) inset;
+      transition: transform .2s var(--ease), box-shadow .2s var(--ease), opacity .2s;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+    }
+    .run-btn::after {
+      content: '';
+      position: absolute; top: 0; left: -100%;
+      width: 55%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+      transform: skewX(-25deg);
+      transition: left .65s var(--ease);
+    }
+    .run-btn:hover:not(:disabled)::after { left: 160%; }
+    .run-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(124,92,252,.6), 0 1px 0 rgba(255,255,255,.15) inset; }
+    .run-btn:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 12px rgba(124,92,252,.35); }
+    .run-btn:disabled { opacity: .32; cursor: not-allowed; box-shadow: none; }
+
+    /* Progress */
+    .prog-track {
+      height: 3px; background: rgba(255,255,255,.05);
+      border-radius: 999px; overflow: hidden; margin-top: 14px;
+    }
+    .prog-fill {
+      height: 100%; border-radius: 999px; width: 0%;
+      background: linear-gradient(90deg, #8b6bfd, #5b8af7, #0fba81);
+      background-size: 200% 100%;
+      box-shadow: 0 0 12px rgba(124,92,252,.7);
+      transition: width .55s var(--ease);
+      animation: shimmerBg 2.5s linear infinite;
+    }
+    @keyframes shimmerBg { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }
+    .prog-lbl { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 6px; min-height: 14px; }
+
+    /* Status */
+    .status-msg {
+      display: none; margin-top: 12px;
+      padding: 10px 14px; border-radius: 10px;
+      font-size: 12px; line-height: 1.55;
+      align-items: flex-start; gap: 9px;
+      border: 1px solid;
+    }
+    .status-msg.show { display: flex; }
+    .status-msg.loading { background: rgba(59,130,246,.07); color: #7eb8ff; border-color: rgba(59,130,246,.2); }
+    .status-msg.success { background: rgba(15,186,129,.07); color: var(--green); border-color: rgba(15,186,129,.22); }
+    .status-msg.error   { background: rgba(240,82,82,.07); color: #f87171; border-color: rgba(240,82,82,.22); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px;
+      border: 2px solid rgba(126,184,255,.2); border-top-color: #7eb8ff;
+      border-radius: 50%; animation: spin .65s linear infinite;
+    }
+
+    .reset-btn {
+      width: 100%; margin-top: 8px; padding: 8px;
+      background: transparent; border: 1px solid var(--border2);
+      border-radius: 8px; color: var(--text3); font-size: 12px;
+      cursor: pointer; transition: all .15s; display: none;
+    }
+    .reset-btn:hover { color: var(--red); border-color: rgba(240,82,82,.4); background: rgba(240,82,82,.04); }
+
+    /* Tips */
+    .tips { display: flex; flex-direction: column; gap: 5px; }
+    .tip { display: flex; gap: 9px; font-size: 11.5px; color: var(--text3); line-height: 1.55; }
+    .tip-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: .5; margin-top: 6px; flex-shrink: 0; }
+
+    /* ─── MAIN ─── */
+    .main { padding: 44px 44px; position: relative; }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 78vh; text-align: center;
+    }
+    .es-visual {
+      position: relative; width: 130px; height: 130px; margin-bottom: 36px;
+    }
+    .es-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 1px solid rgba(124,92,252,.2);
+      animation: ringPulse 3s ease-in-out infinite;
+    }
+    .es-ring:nth-child(2) {
+      inset: -18px; border-color: rgba(124,92,252,.1);
+      animation-delay: .6s; animation-duration: 3.5s;
+    }
+    .es-ring:nth-child(3) {
+      inset: -36px; border-color: rgba(124,92,252,.06);
+      animation-delay: 1.2s; animation-duration: 4s;
+    }
+    @keyframes ringPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: .5; }
+    }
+    .es-circle {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: linear-gradient(135deg, rgba(124,92,252,.18) 0%, rgba(91,138,247,.1) 100%);
+      border: 1px solid rgba(124,92,252,.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+      box-shadow: 0 0 60px rgba(124,92,252,.2);
+    }
+    .es-heading {
+      font-size: 26px; font-weight: 800; letter-spacing: -.6px;
+      background: linear-gradient(135deg, #e8edff 0%, #8892b0 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 12px;
+    }
+    .es-sub { font-size: 14px; color: var(--text3); line-height: 1.8; max-width: 320px; }
+    .es-steps {
+      display: flex; gap: 28px; margin-top: 52px; align-items: flex-start;
+    }
+    .es-step { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 110px; }
+    .es-step-num {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 13px; color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .es-step-connector { width: 48px; height: 1px; background: var(--border); margin-top: 19px; flex-shrink: 0; }
+    .es-step-lbl { font-size: 11.5px; color: var(--text3); text-align: center; line-height: 1.55; }
+
+    /* ─── RESULTS ─── */
+    #resultsWrap { display: none; }
+    #resultsWrap.show { display: block; }
+
+    /* Results header */
+    .rh {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 20px;
+      margin-bottom: 28px;
+    }
+    .rh-left {}
+    .rh-title {
+      font-size: 27px; font-weight: 800; letter-spacing: -.6px;
+      background: linear-gradient(135deg, #eef2ff 0%, #7888aa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      line-height: 1.1; margin-bottom: 5px;
+    }
+    .rh-meta { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+    .export-row { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .export-lbl { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-right: 3px; }
+    .exp-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 13px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: rgba(255,255,255,.03);
+      color: var(--text2); font-family: var(--mono); font-size: 11px;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+    .exp-btn:hover {
+      border-color: rgba(124,92,252,.5); color: #a78bfa;
+      background: rgba(124,92,252,.07);
+      box-shadow: 0 0 16px rgba(124,92,252,.12);
+    }
+
+    /* Stats */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px 18px;
+      position: relative; overflow: hidden;
+      transition: transform .22s var(--ease), box-shadow .22s var(--ease), border-color .22s;
+    }
+    .stat-card:hover { transform: translateY(-3px); border-color: var(--border2); box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 14px 14px 0 0;
+    }
+    .stat-card::after {
+      content: ''; position: absolute;
+      top: -50px; right: -30px; width: 110px; height: 110px;
+      border-radius: 50%; opacity: .07; pointer-events: none;
+    }
+    .c1::before { background: linear-gradient(90deg,#8b6bfd,#5b8af7); box-shadow: 0 0 16px rgba(124,92,252,.7); }
+    .c1::after  { background: #8b6bfd; }
+    .c2::before { background: linear-gradient(90deg,#0fba81,#05966c); box-shadow: 0 0 16px rgba(15,186,129,.7); }
+    .c2::after  { background: #0fba81; }
+    .c3::before { background: linear-gradient(90deg,#f5a623,#e08b0c); box-shadow: 0 0 16px rgba(245,166,35,.7); }
+    .c3::after  { background: #f5a623; }
+    .c4::before { background: linear-gradient(90deg,#5b8af7,#3b63d4); box-shadow: 0 0 16px rgba(91,138,247,.7); }
+    .c4::after  { background: #5b8af7; }
+    .stat-val {
+      font-family: var(--mono); font-size: 40px; font-weight: 700;
+      line-height: 1; margin-bottom: 7px; letter-spacing: -2px;
+      position: relative; z-index: 1;
+    }
+    .c1 .stat-val { color: #a78bfa; }
+    .c2 .stat-val { color: #34d399; }
+    .c3 .stat-val { color: #fbbf24; }
+    .c4 .stat-val { color: #7eb8ff; }
+    .stat-lbl {
+      font-family: var(--mono); font-size: 9px; letter-spacing: 1.8px;
+      text-transform: uppercase; color: var(--text3);
+      position: relative; z-index: 1;
+    }
+
+    /* Accordion */
+    .sections { display: flex; flex-direction: column; gap: 10px; }
+    .rs {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .rs:hover { border-color: var(--border2); }
+    .rs-head {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 18px; cursor: pointer; user-select: none;
+      transition: background .12s;
+      border-bottom: 1px solid transparent;
+    }
+    .rs-head:hover { background: rgba(255,255,255,.02); }
+    .rs:not(.closed) .rs-head { border-bottom-color: var(--border); }
+    .rs-icon {
+      width: 32px; height: 32px; flex-shrink: 0;
+      border-radius: 9px; background: rgba(255,255,255,.05);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .rs-title { font-size: 13px; font-weight: 600; }
+    .rs-count {
+      font-family: var(--mono); font-size: 10px;
+      padding: 2px 9px; border-radius: 999px;
+      background: rgba(124,92,252,.1); border: 1px solid rgba(124,92,252,.18);
+      color: #a78bfa;
+    }
+    .rs-chev {
+      margin-left: auto; color: var(--text3); font-size: 11px;
+      transition: transform .25s var(--ease);
+    }
+    .rs.closed .rs-chev { transform: rotate(-90deg); }
+    .rs-body { overflow: hidden; }
+    .rs.closed .rs-body { display: none; }
+
+    /* Info grid */
+    .info-grid {
+      display: grid; gap: 1px; background: var(--border);
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    }
+    .info-cell { background: var(--card); padding: 14px 18px; }
+    .info-lbl { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+    .info-val { font-size: 13px; font-weight: 600; }
+
+    /* Dim grid */
+    .dim-grid {
+      display: grid; gap: 1px; background: var(--border);
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+    .dim-cell { background: var(--card); padding: 24px 18px; text-align: center; }
+    .dim-val {
+      font-family: var(--mono); font-size: 28px; font-weight: 700;
+      color: var(--accent); line-height: 1; margin-bottom: 8px; letter-spacing: -1px;
+    }
+    .dim-lbl { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); }
+    .km-row { padding: 13px 18px; display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid var(--border); }
+    .km-pill {
+      font-family: var(--mono); font-size: 11px;
+      padding: 3px 10px; border-radius: 7px;
+      background: rgba(124,92,252,.08); border: 1px solid rgba(124,92,252,.16);
+      color: #a78bfa;
+    }
+
+    /* Table */
+    .tbl-wrap { overflow-x: auto; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .tbl thead th {
+      background: rgba(255,255,255,.02);
+      padding: 10px 18px;
+      font-family: var(--mono); font-size: 9px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 1.2px;
+      text-align: left; border-bottom: 1px solid var(--border2); white-space: nowrap;
+    }
+    .tbl tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    .tbl tbody tr:last-child { border-bottom: none; }
+    .tbl tbody tr:hover { background: rgba(124,92,252,.045); }
+    .tbl tbody td { padding: 11px 18px; color: var(--text2); vertical-align: top; }
+    .tbl td.code { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
+    .tbl td.name { font-weight: 500; color: var(--text); }
+    .tbl td.dim  { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; }
+    .tbl td.qty  { font-family: var(--mono); font-size: 11px; }
+    .tbl td.note { font-size: 11px; color: var(--text3); max-width: 200px; }
+
+    /* Notes */
+    .note-item {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      font-size: 13px; color: var(--text2); line-height: 1.7;
+    }
+    .note-item:last-child { border-bottom: none; }
+    .note-bullet { color: var(--amber); font-size: 10px; margin-top: 5px; flex-shrink: 0; }
+
+    /* Summary */
+    .summary-body { padding: 20px 18px; font-size: 13.5px; color: var(--text2); line-height: 1.9; }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fu { animation: fadeUp .38s var(--ease) both; }
+    .d1 { animation-delay: .04s; } .d2 { animation-delay: .09s; }
+    .d3 { animation-delay: .14s; } .d4 { animation-delay: .19s; }
+    .d5 { animation-delay: .24s; } .d6 { animation-delay: .29s; }
+
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #2e3248; border-radius: 999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #4e5870; }
-    [x-cloak] { display: none !important; }
-    .progress-bar { transition: width .45s cubic-bezier(.4,0,.2,1); }
-    .section-body { overflow: hidden; transition: max-height .28s cubic-bezier(.4,0,.2,1); }
-    .section-body.closed { max-height: 0 !important; }
-    .chevron-icon { transition: transform .22s ease; }
-    .chevron-icon.closed { transform: rotate(-90deg); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.14); }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border2); }
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .main { padding: 24px 18px; }
+      .rh { flex-direction: column; gap: 14px; }
+      .es-steps { flex-direction: column; align-items: center; }
+      .es-step-connector { display: none; }
+    }
     @media print {
-      aside, header { display: none !important; }
-      .layout { display: block !important; }
+      .sidebar { display: none !important; }
+      .layout { display: block; }
     }
   </style>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-bg text-tx font-sans text-sm leading-relaxed min-h-screen" x-data="kpx()" x-cloak>
+<body>
+  <div class="layout">
 
-  <!-- TOP BAR -->
-  <header class="h-14 bg-surface border-b border-border flex items-center px-7 gap-3 sticky top-0 z-50 shadow-sm">
-    <span class="font-mono text-[13px] font-semibold tracking-[3px] uppercase text-accent">KPX</span>
-    <div class="w-px h-5 bg-border2 flex-shrink-0"></div>
-    <span class="font-mono text-[10px] tracking-[1.2px] uppercase text-tx3">Kitchen Plan Extractor</span>
-    <div class="ml-auto flex items-center gap-2">
-      <span class="font-mono text-[10px] px-2 py-0.5 border border-border2 rounded-full text-tx3" x-text="pages ? `${pages} page${pages > 1 ? 's' : ''} parsed` : 'v3.0 · Groq AI'"></span>
-      <span x-show="data" x-transition class="font-mono text-[10px] px-2 py-0.5 border border-green-500/40 rounded-full text-green-400 bg-green-500/10">● Live</span>
-    </div>
-  </header>
+    <!-- ══ SIDEBAR ══ -->
+    <aside class="sidebar">
 
-  <div class="grid min-h-[calc(100vh-56px)]" style="grid-template-columns: 300px 1fr" x-ref="layout">
-
-    <!-- SIDEBAR -->
-    <aside class="border-r border-border px-[18px] py-5 sticky top-14 max-h-[calc(100vh-56px)] overflow-y-auto scrollbar-thin">
-
-      <!-- API Key -->
-      <div class="mb-5">
-        <div class="font-mono text-[9px] tracking-[1.8px] uppercase text-tx3 mb-2">API Configuration</div>
-        <div class="relative">
-          <input
-            :type="keyVisible ? 'text' : 'password'"
-            x-model="apiKey"
-            @input="saveKey()"
-            placeholder="gsk_…"
-            autocomplete="off" spellcheck="false"
-            class="w-full bg-card border border-border2 rounded-md py-2 pl-3 pr-9 font-mono text-xs text-tx placeholder-tx3 focus:outline-none focus:border-accent transition-colors"
-          />
-          <button @click="keyVisible = !keyVisible"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-tx3 hover:text-tx transition-colors text-sm p-1"
-          >
-            <span x-text="keyVisible ? '🙈' : '👁'"></span>
-          </button>
+      <div class="logo">
+        <div class="logo-mark">KPX</div>
+        <div class="logo-copy">
+          <div class="logo-name">Kitchen Plan X</div>
+          <div class="logo-tag">AI Extractor</div>
         </div>
-        <div class="flex items-center justify-between mt-1.5">
-          <span class="text-[11px] text-tx3">
-            Free at <a href="https://console.groq.com" target="_blank" class="text-accent hover:underline">console.groq.com</a>
-          </span>
-          <span x-show="keySaved" x-transition class="font-mono text-[9px] text-green-400 flex items-center gap-1">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4.5 8L8 3" stroke="#22c55e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="version-pill">v4.0</div>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-label">API Key</div>
+        <div class="key-field">
+          <input type="password" id="apiKey" class="key-input" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
+          <button class="key-toggle" id="keyEye" type="button">👁</button>
+        </div>
+        <div class="key-foot">
+          <span class="key-hint">Free at <a href="https://console.groq.com" target="_blank">console.groq.com</a></span>
+          <span class="key-saved" id="keySaved">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4.5 8L8 3" stroke="#0fba81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Saved
           </span>
         </div>
       </div>
 
-      <!-- Upload zone -->
-      <div class="mb-5">
-        <div class="font-mono text-[9px] tracking-[1.8px] uppercase text-tx3 mb-2">Kitchen Plan PDF</div>
-        <label
-          class="block border border-dashed rounded-xl py-7 px-3 text-center cursor-pointer transition-all relative"
-          :class="file ? 'border-green-500 bg-green-500/[.06]' : isDragging ? 'border-accent bg-accent/10 border-solid' : 'border-border2 bg-card hover:border-accent hover:bg-accent/[.08]'"
-          @dragover.prevent="isDragging = true"
-          @dragleave="isDragging = false"
-          @drop.prevent="isDragging = false; acceptFile($event.dataTransfer.files[0])"
-        >
-          <input type="file" accept=".pdf" class="hidden" @change="acceptFile($event.target.files[0])" />
-          <div class="text-2xl mb-2 opacity-60" x-text="file ? '✅' : '📄'"></div>
-          <div class="text-[13px] font-semibold text-tx2 mb-0.5" x-text="file ? 'PDF ready' : 'Drop PDF here'"></div>
-          <div class="font-mono text-[11px] text-tx3" x-text="file ? '' : 'or click to browse'"></div>
-          <template x-if="file">
-            <div class="mt-2">
-              <div class="font-mono text-[11px] text-green-400 break-all leading-snug" x-text="fileName"></div>
-              <div class="font-mono text-[10px] text-tx3 mt-0.5" x-text="fileSize"></div>
-            </div>
-          </template>
-        </label>
+      <div class="sb-group">
+        <div class="sb-label">Kitchen Plan PDF</div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept=".pdf" />
+          <div class="dz-icon-wrap" id="dzIconWrap">📄</div>
+          <div class="dz-title" id="dzTitle">Drop PDF here</div>
+          <div class="dz-hint" id="dzHint">or click to browse</div>
+          <div class="dz-file" id="dzFile">
+            <div class="dz-name" id="dzName"></div>
+            <div class="dz-size" id="dzSize"></div>
+          </div>
+        </div>
       </div>
 
-      <!-- Extract button -->
-      <div class="mb-5">
-        <button
-          @click="extract()"
-          :disabled="!canExtract"
-          class="w-full bg-accent hover:bg-accentH text-white font-semibold rounded-md py-2.5 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_6px_24px_rgba(124,109,250,.42)] hover:-translate-y-px active:translate-y-0"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1.5v8M4.5 7L7 9.5l2.5-2.5M2 12h10" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <div class="sb-group">
+        <button class="run-btn" id="runBtn" disabled>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M7.5 2v9M5 8.5l2.5 2.5 2.5-2.5M2.5 13h10" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span x-text="loading ? 'Extracting…' : 'Extract Kitchen Data'"></span>
+          Extract Kitchen Data
         </button>
-
-        <!-- Progress bar -->
-        <div class="mt-3 h-[3px] bg-border rounded-full overflow-hidden">
-          <div class="h-full rounded-full progress-bar"
-            :style="`width: ${progress}%; background: linear-gradient(90deg, #7c6dfa, #60a5fa)`"
-          ></div>
-        </div>
-        <div class="font-mono text-[10px] text-tx3 mt-1.5 min-h-[14px]" x-text="progressLabel"></div>
-
-        <!-- Status -->
-        <div x-show="status.msg" x-transition
-          class="mt-2.5 rounded-md px-3 py-2 text-xs flex items-start gap-2 border"
-          :class="{
-            'bg-blue-500/10 text-blue-400 border-blue-500/20': status.type === 'loading',
-            'bg-green-500/10 text-green-400 border-green-500/30': status.type === 'success',
-            'bg-red-500/10 text-red-400 border-red-500/30': status.type === 'error',
-          }"
-        >
-          <span x-show="status.type === 'loading'" class="animate-spin-slow w-3 h-3 border-2 border-blue-500/30 border-t-blue-400 rounded-full flex-shrink-0 mt-0.5"></span>
-          <span x-show="status.type === 'success'" class="flex-shrink-0">✓</span>
-          <span x-show="status.type === 'error'" class="flex-shrink-0">✕</span>
-          <span x-text="status.msg"></span>
-        </div>
-
-        <!-- Reset -->
-        <button x-show="data || status.type === 'error'" x-transition
-          @click="reset()"
-          class="w-full mt-2 bg-transparent text-tx3 border border-border2 rounded-md py-1.5 text-xs hover:text-red-400 hover:border-red-500/60 transition-colors"
-        >↺ Start over</button>
+        <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-lbl" id="progLbl"></div>
+        <div class="status-msg" id="statusMsg"></div>
+        <button class="reset-btn" id="resetBtn">↺ &nbsp;Start over</button>
       </div>
 
-      <!-- Tips -->
-      <div>
-        <div class="font-mono text-[9px] tracking-[1.8px] uppercase text-tx3 mb-2">Notes</div>
-        <ul class="text-[11px] text-tx3 space-y-1">
-          <template x-for="tip in tips">
-            <li class="flex gap-2"><span class="text-accent">·</span><span x-text="tip"></span></li>
-          </template>
-        </ul>
+      <div class="sb-group">
+        <div class="sb-label">Notes</div>
+        <div class="tips">
+          <div class="tip"><div class="tip-dot"></div><span>Text-based PDFs work best</span></div>
+          <div class="tip"><div class="tip-dot"></div><span>Multi-page plans supported (up to 25 MB)</span></div>
+          <div class="tip"><div class="tip-dot"></div><span>API key is saved locally in your browser</span></div>
+          <div class="tip"><div class="tip-dot"></div><span>PDF text extraction runs on the server</span></div>
+          <div class="tip"><div class="tip-dot"></div><span>Powered by Groq · llama-3.3-70b</span></div>
+        </div>
       </div>
 
     </aside>
 
-    <!-- MAIN PANEL -->
-    <main class="p-8 min-w-0">
+    <!-- ══ MAIN ══ -->
+    <main class="main">
 
       <!-- Empty state -->
-      <div x-show="!data && !loading" x-transition
-        class="flex flex-col items-center justify-center py-28 text-center"
-      >
-        <div class="text-5xl mb-5 opacity-15">🏠</div>
-        <div class="text-lg font-semibold text-tx2 opacity-40 mb-2">No data yet</div>
-        <div class="text-[13px] text-tx3 leading-relaxed max-w-sm">
-          Enter your Groq API key, upload a kitchen plan PDF, and click Extract. All structured data will appear here.
+      <div class="empty-state" id="emptyState">
+        <div class="es-visual">
+          <div class="es-ring"></div>
+          <div class="es-ring"></div>
+          <div class="es-ring"></div>
+          <div class="es-circle">🏠</div>
         </div>
-      </div>
-
-      <!-- Loading skeleton -->
-      <div x-show="loading" x-transition class="animate-pulse space-y-3">
-        <div class="grid grid-cols-4 gap-3 mb-5">
-          <template x-for="i in 4">
-            <div class="h-20 bg-card border border-border rounded-xl"></div>
-          </template>
+        <h1 class="es-heading">No data yet</h1>
+        <p class="es-sub">Enter your Groq API key, upload a kitchen plan PDF, and hit extract. Structured data appears here instantly.</p>
+        <div class="es-steps">
+          <div class="es-step">
+            <div class="es-step-num">1</div>
+            <div class="es-step-lbl">Paste your Groq API key</div>
+          </div>
+          <div class="es-step-connector"></div>
+          <div class="es-step">
+            <div class="es-step-num">2</div>
+            <div class="es-step-lbl">Upload a kitchen plan PDF</div>
+          </div>
+          <div class="es-step-connector"></div>
+          <div class="es-step">
+            <div class="es-step-num">3</div>
+            <div class="es-step-lbl">Click extract and review results</div>
+          </div>
         </div>
-        <div class="h-10 bg-card border border-border rounded-xl"></div>
-        <div class="h-40 bg-card border border-border rounded-xl"></div>
-        <div class="h-40 bg-card border border-border rounded-xl"></div>
       </div>
 
       <!-- Results -->
-      <div x-show="data && !loading" x-transition>
-
-        <!-- Stats bar -->
-        <div class="grid grid-cols-4 gap-3 mb-5" x-show="data">
-          <template x-for="(stat, i) in stats" :key="stat.label">
-            <div class="bg-card border border-border rounded-xl p-4 border-t-2 animate-fade-up"
-              :class="stat.color"
-              :style="`animation-delay: ${i * 40}ms`"
-            >
-              <div class="font-mono text-[32px] font-bold leading-none mb-1" x-text="stat.value"></div>
-              <div class="font-mono text-[9px] tracking-[1.2px] uppercase text-tx3" x-text="stat.label"></div>
-            </div>
-          </template>
+      <div id="resultsWrap">
+        <div class="rh">
+          <div class="rh-left">
+            <div class="rh-title">Extraction Results</div>
+            <div class="rh-meta" id="rhMeta"></div>
+          </div>
+          <div class="export-row">
+            <span class="export-lbl">Export</span>
+            <button class="exp-btn" id="btnJson">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 8.5h8M5.5 2v5M3.5 5l2 2 2-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              JSON
+            </button>
+            <button class="exp-btn" id="btnCsv">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="1" y="1" width="9" height="9" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M1 3.8h9M1 6.5h9M3.8 3.8v6.2" stroke="currentColor" stroke-width="1.3"/></svg>
+              Units CSV
+            </button>
+            <button class="exp-btn" id="btnCopy">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="2.5" y="2.5" width="7" height="7.5" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 8.5V1.5a1 1 0 0 1 1-1h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Copy JSON
+            </button>
+          </div>
         </div>
-
-        <!-- Export bar -->
-        <div class="flex items-center gap-2 mb-5 flex-wrap">
-          <span class="font-mono text-[9px] tracking-[1.5px] uppercase text-tx3 mr-1">Export</span>
-          <button @click="exportJson()" class="exp-btn inline-flex items-center gap-1.5 font-mono text-[11px] px-3 py-1 rounded border border-border2 bg-card text-tx2 hover:border-accent hover:text-accent hover:bg-accent/10 transition-all">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 8.5h8M5.5 2v5M3.5 5l2 2 2-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            JSON
-          </button>
-          <button @click="exportCsv()" class="exp-btn inline-flex items-center gap-1.5 font-mono text-[11px] px-3 py-1 rounded border border-border2 bg-card text-tx2 hover:border-accent hover:text-accent hover:bg-accent/10 transition-all">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="1" y="1" width="9" height="9" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M1 3.8h9M1 6.5h9M3.8 3.8v6.2" stroke="currentColor" stroke-width="1.3"/></svg>
-            Units CSV
-          </button>
-          <button @click="copyJson()" class="exp-btn inline-flex items-center gap-1.5 font-mono text-[11px] px-3 py-1 rounded border border-border2 bg-card text-tx2 hover:border-accent hover:text-accent hover:bg-accent/10 transition-all">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="2.5" y="2.5" width="7" height="7.5" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 8.5V1.5a1 1 0 0 1 1-1h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-            <span x-text="copied ? '✓ Copied!' : 'Copy JSON'"></span>
-          </button>
-        </div>
-
-        <!-- ── Accordion sections ── -->
-        <div class="space-y-3" x-show="data">
-
-          <!-- Project Info -->
-          <template x-if="data && hasProjectInfo">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:40ms">
-              <button @click="toggle('project')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">📋</span>
-                <span class="text-[13px] font-semibold">Project Information</span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.project ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.project ? '' : 'closed'" :style="open.project ? 'max-height: 2000px' : ''">
-                <div class="grid gap-px bg-border" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
-                  <template x-for="cell in projectCells" :key="cell.label">
-                    <template x-if="cell.value">
-                      <div class="bg-card px-[18px] py-3">
-                        <div class="font-mono text-[9px] tracking-[1.2px] uppercase text-tx3 mb-1" x-text="cell.label"></div>
-                        <div class="text-[13px] font-semibold" x-text="cell.value"></div>
-                      </div>
-                    </template>
-                  </template>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Dimensions -->
-          <template x-if="data && hasDimensions">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:80ms">
-              <button @click="toggle('dimensions')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">📏</span>
-                <span class="text-[13px] font-semibold">Dimensions</span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.dimensions ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.dimensions ? '' : 'closed'" :style="open.dimensions ? 'max-height: 2000px' : ''">
-                <div class="grid gap-px bg-border" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr))">
-                  <template x-for="dim in dimCells" :key="dim.label">
-                    <template x-if="dim.value">
-                      <div class="bg-card px-[18px] py-5 text-center">
-                        <div class="font-mono text-[26px] font-bold text-accent leading-none mb-1.5" x-text="dim.value"></div>
-                        <div class="font-mono text-[9px] tracking-[1.2px] uppercase text-tx3" x-text="dim.label"></div>
-                      </div>
-                    </template>
-                  </template>
-                </div>
-                <template x-if="data.dimensions && data.dimensions.key_measurements && data.dimensions.key_measurements.length">
-                  <div class="px-[18px] py-3 border-t border-border flex flex-wrap gap-1.5">
-                    <template x-for="m in data.dimensions.key_measurements">
-                      <span class="font-mono text-[11px] px-2.5 py-0.5 bg-card2 border border-border2 rounded text-tx2" x-text="m"></span>
-                    </template>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </template>
-
-          <!-- Base Units -->
-          <template x-if="data && data.base_units && data.base_units.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:120ms">
-              <button @click="toggle('base')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🗄</span>
-                <span class="text-[13px] font-semibold">Base Units</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.base_units.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.base ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.base ? '' : 'closed'" :style="open.base ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Description</th>
-                      <th class="unit-th">Width</th><th class="unit-th">Height</th><th class="unit-th">Depth</th>
-                      <th class="unit-th">Qty</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="u in data.base_units" :key="u.code">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="u.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="u.description||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.width||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.height||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.depth||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.quantity||'1'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="u.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Wall Units -->
-          <template x-if="data && data.wall_units && data.wall_units.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:160ms">
-              <button @click="toggle('wall')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🧱</span>
-                <span class="text-[13px] font-semibold">Wall Units</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.wall_units.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.wall ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.wall ? '' : 'closed'" :style="open.wall ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Description</th>
-                      <th class="unit-th">Width</th><th class="unit-th">Height</th><th class="unit-th">Depth</th>
-                      <th class="unit-th">Qty</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="u in data.wall_units" :key="u.code">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="u.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="u.description||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.width||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.height||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.depth||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.quantity||'1'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="u.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Tall Units -->
-          <template x-if="data && data.tall_units && data.tall_units.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:200ms">
-              <button @click="toggle('tall')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">📦</span>
-                <span class="text-[13px] font-semibold">Tall Units</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.tall_units.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.tall ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.tall ? '' : 'closed'" :style="open.tall ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Description</th>
-                      <th class="unit-th">Width</th><th class="unit-th">Height</th><th class="unit-th">Depth</th>
-                      <th class="unit-th">Qty</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="u in data.tall_units" :key="u.code">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="u.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="u.description||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.width||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.height||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.depth||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.quantity||'1'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="u.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Appliances -->
-          <template x-if="data && data.appliances && data.appliances.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:240ms">
-              <button @click="toggle('appliances')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">⚡</span>
-                <span class="text-[13px] font-semibold">Appliances</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.appliances.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.appliances ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.appliances ? '' : 'closed'" :style="open.appliances ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Type</th><th class="unit-th">Description</th>
-                      <th class="unit-th">Brand</th><th class="unit-th">W</th><th class="unit-th">H</th><th class="unit-th">D</th>
-                      <th class="unit-th">Qty</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="u in data.appliances" :key="u.code">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="u.code||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="u.type||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="u.description||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="u.brand||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.width||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.height||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.depth||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="u.quantity||'1'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="u.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Worktops -->
-          <template x-if="data && data.worktops && data.worktops.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:280ms">
-              <button @click="toggle('worktops')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🔲</span>
-                <span class="text-[13px] font-semibold">Worktops</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.worktops.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.worktops ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.worktops ? '' : 'closed'" :style="open.worktops ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Material</th><th class="unit-th">Colour</th>
-                      <th class="unit-th">Length</th><th class="unit-th">Depth</th><th class="unit-th">Thickness</th>
-                      <th class="unit-th">Qty</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="w in data.worktops">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="w.material||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="w.colour||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="w.length||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="w.depth||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="w.thickness||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="w.quantity||'1'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="w.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Sinks -->
-          <template x-if="data && data.sinks && data.sinks.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:320ms">
-              <button @click="toggle('sinks')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🚿</span>
-                <span class="text-[13px] font-semibold">Sinks</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.sinks.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.sinks ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.sinks ? '' : 'closed'" :style="open.sinks ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Type</th><th class="unit-th">Description</th><th class="unit-th">Width</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="s in data.sinks">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="s.code||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="s.type||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="s.description||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="s.width||'—'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="s.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Taps -->
-          <template x-if="data && data.taps && data.taps.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:360ms">
-              <button @click="toggle('taps')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🚰</span>
-                <span class="text-[13px] font-semibold">Taps</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.taps.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.taps ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.taps ? '' : 'closed'" :style="open.taps ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Description</th><th class="unit-th">Finish</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="t in data.taps">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="t.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="t.description||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="t.finish||'—'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="t.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Handles -->
-          <template x-if="data && data.handles && data.handles.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:400ms">
-              <button @click="toggle('handles')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🔑</span>
-                <span class="text-[13px] font-semibold">Handles</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.handles.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.handles ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.handles ? '' : 'closed'" :style="open.handles ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Description</th><th class="unit-th">Finish</th><th class="unit-th">Qty</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="h in data.handles">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="h.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="h.description||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="h.finish||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="h.quantity||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Lighting -->
-          <template x-if="data && data.lighting && data.lighting.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:440ms">
-              <button @click="toggle('lighting')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">💡</span>
-                <span class="text-[13px] font-semibold">Lighting</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.lighting.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.lighting ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.lighting ? '' : 'closed'" :style="open.lighting ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Type</th><th class="unit-th">Location</th><th class="unit-th">Qty</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="l in data.lighting">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="l.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="l.type||'—'"></td>
-                          <td class="px-4 py-2.5 text-tx2" x-text="l.location||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="l.quantity||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Accessories -->
-          <template x-if="data && data.accessories && data.accessories.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:480ms">
-              <button @click="toggle('accessories')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">🔧</span>
-                <span class="text-[13px] font-semibold">Accessories</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.accessories.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.accessories ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.accessories ? '' : 'closed'" :style="open.accessories ? 'max-height: 2000px' : ''">
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse text-[12.5px]">
-                    <thead><tr class="bg-card2 border-b border-border2">
-                      <th class="unit-th">Code</th><th class="unit-th">Item</th><th class="unit-th">Qty</th><th class="unit-th">Notes</th>
-                    </tr></thead>
-                    <tbody>
-                      <template x-for="a in data.accessories">
-                        <tr class="border-b border-border last:border-0 hover:bg-white/[.02] transition-colors">
-                          <td class="px-4 py-2.5 font-mono font-semibold text-tx" x-text="a.code||'—'"></td>
-                          <td class="px-4 py-2.5 font-medium text-tx" x-text="a.item||'—'"></td>
-                          <td class="px-4 py-2.5 font-mono text-[11px] text-tx3" x-text="a.quantity||'—'"></td>
-                          <td class="px-4 py-2.5 text-[11px] text-tx3 max-w-[200px]" x-text="a.notes||'—'"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Special Notes -->
-          <template x-if="data && data.special_notes && data.special_notes.length">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:520ms">
-              <button @click="toggle('notes')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">⚠️</span>
-                <span class="text-[13px] font-semibold">Special Notes</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-card2 border border-border2 text-tx3" x-text="data.special_notes.length"></span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.notes ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.notes ? '' : 'closed'" :style="open.notes ? 'max-height: 2000px' : ''">
-                <div>
-                  <template x-for="note in data.special_notes">
-                    <div class="flex items-start gap-2.5 px-[18px] py-3 border-b border-border last:border-0 text-[13px] text-tx2 leading-relaxed">
-                      <span class="text-amber-500 text-[10px] mt-1 flex-shrink-0">▸</span>
-                      <span x-text="note"></span>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- AI Summary -->
-          <template x-if="data && data.summary">
-            <div class="bg-card border border-border rounded-2xl overflow-hidden animate-fade-up" style="animation-delay:560ms">
-              <button @click="toggle('summary')" class="w-full flex items-center gap-2.5 px-[18px] py-3 border-b border-border hover:bg-white/[.02] transition-colors">
-                <span class="text-[15px]">📝</span>
-                <span class="text-[13px] font-semibold">AI Summary</span>
-                <span class="ml-auto text-tx3 text-xs chevron-icon" :class="open.summary ? '' : 'closed'">▾</span>
-              </button>
-              <div class="section-body" :class="open.summary ? '' : 'closed'" :style="open.summary ? 'max-height: 2000px' : ''">
-                <div class="px-[18px] py-4 text-[13px] text-tx2 leading-loose" x-text="data.summary"></div>
-              </div>
-            </div>
-          </template>
-
-        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="sections" id="sections"></div>
       </div>
 
     </main>
   </div>
 
-  <style>
-    .unit-th {
-      padding: 9px 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: #4e5870;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      text-align: left;
-      white-space: nowrap;
-    }
-    @media (max-width: 900px) {
-      [style*="grid-template-columns: 300px 1fr"] {
-        grid-template-columns: 1fr !important;
-      }
-      aside.sticky { position: static !important; max-height: none !important; border-right: none; border-bottom: 1px solid #252838; }
-    }
-  </style>
-
   <script>
-    function kpx() {
-      return {
-        apiKey: localStorage.getItem('kpx_groq_key') || '',
-        keyVisible: false,
-        keySaved: !!localStorage.getItem('kpx_groq_key'),
-        isDragging: false,
-        file: null,
-        fileName: '',
-        fileSize: '',
-        loading: false,
-        progress: 0,
-        progressLabel: '',
-        status: { type: '', msg: '' },
-        data: null,
-        pages: 0,
-        copied: false,
-        open: {
-          project: true, dimensions: true, base: true, wall: true, tall: true,
-          appliances: true, worktops: true, sinks: true, taps: true,
-          handles: true, lighting: true, accessories: true, notes: true, summary: true,
-        },
-        tips: [
-          'Text-based PDFs work best',
-          'Multi-page plans supported (up to 25 MB)',
-          'API key is saved in your browser',
-          'PDF processing runs on the server',
-          'Groq llama-3.3-70b model used',
-        ],
+    /* ── DOM refs ── */
+    const g = id => document.getElementById(id);
+    const el = {
+      apiKey: g('apiKey'), keyEye: g('keyEye'), keySaved: g('keySaved'),
+      dropZone: g('dropZone'), fileInput: g('fileInput'),
+      dzIconWrap: g('dzIconWrap'), dzTitle: g('dzTitle'), dzHint: g('dzHint'),
+      dzFile: g('dzFile'), dzName: g('dzName'), dzSize: g('dzSize'),
+      runBtn: g('runBtn'), resetBtn: g('resetBtn'),
+      progFill: g('progFill'), progLbl: g('progLbl'), statusMsg: g('statusMsg'),
+      emptyState: g('emptyState'), resultsWrap: g('resultsWrap'),
+      statsGrid: g('statsGrid'), sections: g('sections'),
+      btnJson: g('btnJson'), btnCsv: g('btnCsv'), btnCopy: g('btnCopy'),
+      rhMeta: g('rhMeta'),
+    };
 
-        get canExtract() {
-          return !!this.file && this.apiKey.length > 15 && !this.loading;
-        },
+    let currentFile = null, extractedData = null;
 
-        get stats() {
-          if (!this.data) return [];
-          return [
-            { value: (this.data.base_units||[]).length,  label: 'Base Units',  color: 'border-t-accent'          },
-            { value: (this.data.wall_units||[]).length,  label: 'Wall Units',  color: 'border-t-green-500'       },
-            { value: (this.data.appliances||[]).length,  label: 'Appliances',  color: 'border-t-amber-400'       },
-            { value: (this.data.accessories||[]).length, label: 'Accessories', color: 'border-t-blue-400'        },
-          ];
-        },
+    /* ── API Key ── */
+    const saved = localStorage.getItem('kpx_key');
+    if (saved) { el.apiKey.value = saved; el.keySaved.classList.add('show'); }
 
-        get hasProjectInfo() {
-          const pi = this.data?.project_info || {};
-          return Object.values(pi).some(v => v);
-        },
+    el.apiKey.addEventListener('input', () => {
+      const v = el.apiKey.value.trim();
+      if (v.length > 15) { localStorage.setItem('kpx_key', v); el.keySaved.classList.add('show'); }
+      else el.keySaved.classList.remove('show');
+      checkReady();
+    });
+    el.keyEye.addEventListener('click', () => {
+      el.apiKey.type = el.apiKey.type === 'password' ? 'text' : 'password';
+    });
 
-        get projectCells() {
-          const pi = this.data?.project_info || {};
-          return [
-            { label: 'Developer',   value: pi.developer     },
-            { label: 'Location',    value: pi.location      },
-            { label: 'Model/Type',  value: pi.model         },
-            { label: 'Plot',        value: pi.plot          },
-            { label: 'Designer',    value: pi.designer      },
-            { label: 'Revision',    value: pi.revision      },
-            { label: 'Date',        value: pi.date          },
-            { label: 'Drawing No.', value: pi.drawing_number},
-          ];
-        },
+    /* ── Drag & drop ── */
+    el.dropZone.addEventListener('dragover', e => { e.preventDefault(); el.dropZone.classList.add('over'); });
+    el.dropZone.addEventListener('dragleave', () => el.dropZone.classList.remove('over'));
+    el.dropZone.addEventListener('drop', e => {
+      e.preventDefault(); el.dropZone.classList.remove('over');
+      if (e.dataTransfer.files[0]) acceptFile(e.dataTransfer.files[0]);
+    });
+    el.fileInput.addEventListener('change', e => { if (e.target.files[0]) acceptFile(e.target.files[0]); });
 
-        get hasDimensions() {
-          const d = this.data?.dimensions || {};
-          return d.total_length || d.total_depth || d.total_height || d.worktop_height || (d.key_measurements||[]).length;
-        },
+    function acceptFile(file) {
+      if (file.type !== 'application/pdf') { showStatus('Please upload a PDF file.', 'error'); return; }
+      currentFile = file;
+      el.dropZone.classList.add('ready');
+      el.dropZone.classList.remove('over');
+      el.dzIconWrap.textContent = '✅';
+      el.dzTitle.textContent = 'Ready to extract';
+      el.dzHint.textContent = '';
+      el.dzName.textContent = file.name;
+      el.dzSize.textContent = fmtBytes(file.size);
+      el.dzFile.classList.add('show');
+      clearStatus(); checkReady();
+    }
 
-        get dimCells() {
-          const d = this.data?.dimensions || {};
-          return [
-            { label: 'Total Length', value: d.total_length   },
-            { label: 'Depth',        value: d.total_depth    },
-            { label: 'Height',       value: d.total_height   },
-            { label: 'Worktop Ht.',  value: d.worktop_height },
-          ];
-        },
+    function checkReady() {
+      el.runBtn.disabled = !(currentFile && el.apiKey.value.trim().length > 15);
+    }
 
-        saveKey() {
-          if (this.apiKey.length > 15) {
-            localStorage.setItem('kpx_groq_key', this.apiKey);
-            this.keySaved = true;
-          } else {
-            this.keySaved = false;
-          }
-        },
+    /* ── Extraction ── */
+    el.runBtn.addEventListener('click', runExtraction);
 
-        acceptFile(file) {
-          if (!file) return;
-          if (file.type !== 'application/pdf') {
-            this.setStatus('Please upload a PDF file.', 'error');
-            return;
-          }
-          this.file = file;
-          this.fileName = file.name;
-          this.fileSize = this.fmtBytes(file.size);
-          this.clearStatus();
-        },
+    async function runExtraction() {
+      const key = el.apiKey.value.trim();
+      if (!key || !currentFile) return;
+      el.runBtn.disabled = true;
+      el.resetBtn.style.display = 'none';
+      clearStatus();
 
-        toggle(key) {
-          this.open[key] = !this.open[key];
-        },
+      const stages = [
+        [8,  'Uploading PDF…'],
+        [22, 'Extracting text from PDF…'],
+        [40, 'Parsing document structure…'],
+        [55, 'Sending to Groq AI…'],
+        [70, 'Analysing with llama-3.3-70b…'],
+        [82, 'Structuring extracted data…'],
+      ];
+      let si = 0;
+      setProgress(stages[si][0], stages[si][1]); si++;
+      const timer = setInterval(() => {
+        if (si < stages.length) { setProgress(stages[si][0], stages[si][1]); si++; }
+      }, 1100);
+      showStatus('Analysing with Groq llama-3.3-70b…', 'loading');
 
-        async extract() {
-          if (!this.canExtract) return;
-          this.loading = true;
-          this.data = null;
-          this.clearStatus();
-          this.setProgress(5, 'Uploading PDF…');
+      try {
+        const form = new FormData();
+        form.append('pdf', currentFile);
+        form.append('apiKey', key);
 
-          // Simulate staged progress while server works
-          const stages = [
-            [15, 'Extracting text from PDF…'],
-            [35, 'Parsing document structure…'],
-            [50, 'Sending to Groq AI…'],
-            [65, 'Analysing with llama-3.3-70b…'],
-            [78, 'Structuring data…'],
-          ];
-          let stageIdx = 0;
-          const progTimer = setInterval(() => {
-            if (stageIdx < stages.length) {
-              const [pct, lbl] = stages[stageIdx++];
-              this.setProgress(pct, lbl);
-            }
-          }, 900);
+        const res = await fetch('/api/extract', { method: 'POST', body: form });
+        clearInterval(timer);
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || `Server error ${res.status}`);
 
-          this.setStatus('Analysing with Groq llama-3.3-70b…', 'loading');
+        setProgress(100, '');
+        showStatus('Extraction complete', 'success');
+        extractedData = body.data;
+        render(body.data, body.pages);
+        el.resetBtn.style.display = 'block';
+      } catch (err) {
+        clearInterval(timer);
+        setProgress(0, '');
+        showStatus(err.message, 'error');
+        el.runBtn.disabled = false;
+      }
+    }
 
-          try {
-            const form = new FormData();
-            form.append('pdf', this.file);
-            form.append('apiKey', this.apiKey);
+    el.resetBtn.addEventListener('click', () => {
+      currentFile = null; extractedData = null;
+      el.fileInput.value = '';
+      el.dropZone.classList.remove('ready');
+      el.dzIconWrap.textContent = '📄';
+      el.dzTitle.textContent = 'Drop PDF here';
+      el.dzHint.textContent = 'or click to browse';
+      el.dzFile.classList.remove('show');
+      el.resultsWrap.classList.remove('show');
+      el.emptyState.style.display = '';
+      el.resetBtn.style.display = 'none';
+      setProgress(0, '');
+      clearStatus(); checkReady();
+    });
 
-            const res = await fetch('/api/extract', { method: 'POST', body: form });
-            clearInterval(progTimer);
+    /* ── Render ── */
+    function render(d, pages) {
+      el.emptyState.style.display = 'none';
+      el.resultsWrap.classList.add('show');
+      el.statsGrid.innerHTML = '';
+      el.sections.innerHTML = '';
+      el.rhMeta.textContent = `${pages || '?'} page${pages !== 1 ? 's' : ''} parsed · Groq llama-3.3-70b`;
 
-            const body = await res.json();
+      /* Stats */
+      [
+        { v: (d.base_units  ||[]).length, l: 'Base Units',  c: 'c1' },
+        { v: (d.wall_units  ||[]).length, l: 'Wall Units',  c: 'c2' },
+        { v: (d.appliances  ||[]).length, l: 'Appliances',  c: 'c3' },
+        { v: (d.accessories ||[]).length, l: 'Accessories', c: 'c4' },
+      ].forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = `stat-card ${s.c} fu d${i+1}`;
+        card.innerHTML = `<div class="stat-val" data-target="${s.v}">0</div><div class="stat-lbl">${s.l}</div>`;
+        el.statsGrid.appendChild(card);
+        animateCount(card.querySelector('.stat-val'), s.v);
+      });
 
-            if (!res.ok) {
-              throw new Error(body.error || `Server error ${res.status}`);
-            }
+      let html = '';
+      let di = 1;
+      const d_ = () => `d${Math.min(di++, 6)}`;
 
-            this.setProgress(100, '');
-            this.setStatus('Extraction complete', 'success');
-            this.data = body.data;
-            this.pages = body.pages || 0;
+      /* Project info */
+      const pi = d.project_info || {};
+      if (Object.values(pi).some(v => v)) {
+        const cells = [
+          ['Developer', pi.developer], ['Location', pi.location], ['Model / Type', pi.model],
+          ['Plot', pi.plot], ['Designer', pi.designer], ['Revision', pi.revision],
+          ['Date', pi.date], ['Drawing No.', pi.drawing_number],
+        ].filter(([,v]) => v).map(([l,v]) => `<div class="info-cell"><div class="info-lbl">${l}</div><div class="info-val">${esc(v)}</div></div>`).join('');
+        html += section('📋', 'Project Information', null, `<div class="info-grid">${cells}</div>`, d_());
+      }
 
-          } catch (err) {
-            clearInterval(progTimer);
-            this.setProgress(0, '');
-            this.setStatus(err.message, 'error');
-          } finally {
-            this.loading = false;
-          }
-        },
+      /* Dimensions */
+      const dim = d.dimensions || {};
+      const hasDim = dim.total_length || dim.total_depth || dim.total_height || dim.worktop_height || (dim.key_measurements||[]).length;
+      if (hasDim) {
+        const dcs = [['Total Length', dim.total_length],['Depth',dim.total_depth],['Height',dim.total_height],['Worktop Ht.',dim.worktop_height]]
+          .filter(([,v])=>v).map(([l,v])=>`<div class="dim-cell"><div class="dim-val">${esc(v)}</div><div class="dim-lbl">${l}</div></div>`).join('');
+        const kms = (dim.key_measurements||[]).length ? `<div class="km-row">${dim.key_measurements.map(m=>`<span class="km-pill">${esc(m)}</span>`).join('')}</div>` : '';
+        html += section('📏', 'Dimensions', null, `<div class="dim-grid">${dcs}</div>${kms}`, d_());
+      }
 
-        reset() {
-          this.file = null;
-          this.fileName = '';
-          this.fileSize = '';
-          this.data = null;
-          this.pages = 0;
-          this.loading = false;
-          this.setProgress(0, '');
-          this.clearStatus();
-        },
+      /* Unit tables */
+      if ((d.base_units||[]).length)  html += unitTable('🗄',  'Base Units',   d.base_units,  false, d_());
+      if ((d.wall_units||[]).length)  html += unitTable('🧱',  'Wall Units',   d.wall_units,  false, d_());
+      if ((d.tall_units||[]).length)  html += unitTable('📦',  'Tall Units',   d.tall_units,  false, d_());
+      if ((d.appliances||[]).length)  html += unitTable('⚡',  'Appliances',   d.appliances,  true,  d_());
 
-        setProgress(pct, label) {
-          this.progress = pct;
-          this.progressLabel = label;
-        },
+      /* Worktops */
+      if ((d.worktops||[]).length) {
+        const rows = d.worktops.map(w=>`<tr>
+          <td class="name">${esc(w.material||'—')}</td><td>${esc(w.colour||'—')}</td>
+          <td class="dim">${esc(w.length||'—')}</td><td class="dim">${esc(w.depth||'—')}</td>
+          <td class="dim">${esc(w.thickness||'—')}</td><td class="qty">${esc(w.quantity||'1')}</td>
+          <td class="note">${esc(w.notes||'—')}</td></tr>`).join('');
+        html += section('🔲','Worktops',d.worktops.length,table(['Material','Colour','Length','Depth','Thickness','Qty','Notes'],rows),d_());
+      }
 
-        setStatus(msg, type) {
-          this.status = { msg, type };
-        },
+      /* Sinks */
+      if ((d.sinks||[]).length) {
+        const rows = d.sinks.map(s=>`<tr>
+          <td class="code">${esc(s.code||'—')}</td><td>${esc(s.type||'—')}</td>
+          <td class="name">${esc(s.description||'—')}</td><td class="dim">${esc(s.width||'—')}</td>
+          <td class="note">${esc(s.notes||'—')}</td></tr>`).join('');
+        html += section('🚿','Sinks',d.sinks.length,table(['Code','Type','Description','Width','Notes'],rows),d_());
+      }
 
-        clearStatus() {
-          this.status = { type: '', msg: '' };
-        },
+      /* Taps */
+      if ((d.taps||[]).length) {
+        const rows = d.taps.map(t=>`<tr>
+          <td class="code">${esc(t.code||'—')}</td><td class="name">${esc(t.description||'—')}</td>
+          <td>${esc(t.finish||'—')}</td><td class="note">${esc(t.notes||'—')}</td></tr>`).join('');
+        html += section('🚰','Taps',d.taps.length,table(['Code','Description','Finish','Notes'],rows),d_());
+      }
 
-        fmtBytes(b) {
-          if (b < 1024) return b + ' B';
-          if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-          return (b / 1048576).toFixed(1) + ' MB';
-        },
+      /* Handles */
+      if ((d.handles||[]).length) {
+        const rows = d.handles.map(h=>`<tr>
+          <td class="code">${esc(h.code||'—')}</td><td class="name">${esc(h.description||'—')}</td>
+          <td>${esc(h.finish||'—')}</td><td class="qty">${esc(h.quantity||'—')}</td></tr>`).join('');
+        html += section('🔑','Handles',d.handles.length,table(['Code','Description','Finish','Qty'],rows),d_());
+      }
 
-        exportJson() {
-          if (!this.data) return;
-          this.triggerDownload(
-            new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' }),
-            'kitchen_data.json'
-          );
-        },
+      /* Lighting */
+      if ((d.lighting||[]).length) {
+        const rows = d.lighting.map(l=>`<tr>
+          <td class="code">${esc(l.code||'—')}</td><td class="name">${esc(l.type||'—')}</td>
+          <td>${esc(l.location||'—')}</td><td class="qty">${esc(l.quantity||'—')}</td></tr>`).join('');
+        html += section('💡','Lighting',d.lighting.length,table(['Code','Type','Location','Qty'],rows),d_());
+      }
 
-        exportCsv() {
-          if (!this.data) return;
-          const rows = [
-            ...(this.data.base_units  ||[]).map(u => ({...u, _type:'Base Unit'})),
-            ...(this.data.wall_units  ||[]).map(u => ({...u, _type:'Wall Unit'})),
-            ...(this.data.tall_units  ||[]).map(u => ({...u, _type:'Tall Unit'})),
-            ...(this.data.appliances  ||[]).map(u => ({...u, _type:'Appliance'})),
-          ];
-          if (!rows.length) { alert('No unit data to export.'); return; }
-          const keys = ['_type','code','description','type','brand','width','height','depth','quantity','notes'];
-          const csv = [keys.join(','), ...rows.map(r => keys.map(k => JSON.stringify(r[k]||'')).join(','))].join('\n');
-          this.triggerDownload(new Blob([csv], { type: 'text/csv' }), 'kitchen_units.csv');
-        },
+      /* Accessories */
+      if ((d.accessories||[]).length) {
+        const rows = d.accessories.map(a=>`<tr>
+          <td class="code">${esc(a.code||'—')}</td><td class="name">${esc(a.item||'—')}</td>
+          <td class="qty">${esc(a.quantity||'—')}</td><td class="note">${esc(a.notes||'—')}</td></tr>`).join('');
+        html += section('🔧','Accessories',d.accessories.length,table(['Code','Item','Qty','Notes'],rows),d_());
+      }
 
-        async copyJson() {
-          if (!this.data) return;
-          await navigator.clipboard.writeText(JSON.stringify(this.data, null, 2));
-          this.copied = true;
-          setTimeout(() => { this.copied = false; }, 2000);
-        },
+      /* Special notes */
+      if ((d.special_notes||[]).length) {
+        const items = d.special_notes.map(n=>`<div class="note-item"><span class="note-bullet">▸</span>${esc(n)}</div>`).join('');
+        html += section('⚠️','Special Notes',d.special_notes.length,items,d_());
+      }
 
-        triggerDownload(blob, name) {
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = name;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-        },
+      /* Summary */
+      if (d.summary) {
+        html += section('📝','AI Summary',null,`<div class="summary-body">${esc(d.summary)}</div>`,d_());
+      }
+
+      el.sections.innerHTML = html;
+
+      /* Accordion toggles */
+      el.sections.querySelectorAll('.rs-head').forEach(h =>
+        h.addEventListener('click', () => h.closest('.rs').classList.toggle('closed'))
+      );
+
+      /* Export bindings */
+      el.btnJson.onclick = exportJson;
+      el.btnCsv.onclick  = exportCsv;
+      el.btnCopy.onclick = copyJson;
+    }
+
+    /* ── Helpers ── */
+    function section(icon, title, count, body, delay) {
+      const badge = count != null ? `<span class="rs-count">${count}</span>` : '';
+      return `<div class="rs fu ${delay}">
+        <div class="rs-head">
+          <div class="rs-icon">${icon}</div>
+          <span class="rs-title">${title}</span>
+          ${badge}
+          <span class="rs-chev">▾</span>
+        </div>
+        <div class="rs-body">${body}</div>
+      </div>`;
+    }
+
+    function table(heads, rows) {
+      return `<div class="tbl-wrap"><table class="tbl">
+        <thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+    }
+
+    function unitTable(icon, title, units, isApp, delay) {
+      const heads = isApp
+        ? ['Code','Type','Description','Brand','W','H','D','Qty','Notes']
+        : ['Code','Description','Width','Height','Depth','Qty','Notes'];
+      const rows = units.map(u => isApp
+        ? `<tr><td class="code">${esc(u.code||'—')}</td><td>${esc(u.type||'—')}</td>
+           <td class="name">${esc(u.description||'—')}</td><td>${esc(u.brand||'—')}</td>
+           <td class="dim">${esc(u.width||'—')}</td><td class="dim">${esc(u.height||'—')}</td>
+           <td class="dim">${esc(u.depth||'—')}</td><td class="qty">${esc(u.quantity||'1')}</td>
+           <td class="note">${esc(u.notes||'—')}</td></tr>`
+        : `<tr><td class="code">${esc(u.code||'—')}</td><td class="name">${esc(u.description||'—')}</td>
+           <td class="dim">${esc(u.width||'—')}</td><td class="dim">${esc(u.height||'—')}</td>
+           <td class="dim">${esc(u.depth||'—')}</td><td class="qty">${esc(u.quantity||'1')}</td>
+           <td class="note">${esc(u.notes||'—')}</td></tr>`
+      ).join('');
+      return section(icon, title, units.length, table(heads, rows), delay);
+    }
+
+    function esc(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function animateCount(el, target) {
+      const dur = 800, start = performance.now();
+      const step = now => {
+        const t = Math.min((now - start) / dur, 1);
+        const ease = t < .5 ? 2*t*t : -1+(4-2*t)*t;
+        el.textContent = Math.round(ease * target);
+        if (t < 1) requestAnimationFrame(step);
       };
+      requestAnimationFrame(step);
+    }
+
+    function setProgress(pct, label) {
+      el.progFill.style.width = pct + '%';
+      el.progLbl.textContent = label;
+    }
+
+    function showStatus(msg, type) {
+      const icon = type === 'loading' ? '<span class="spinner"></span>'
+                 : type === 'success' ? '✓' : '✕';
+      el.statusMsg.className = `status-msg show ${type}`;
+      el.statusMsg.innerHTML = `${icon}<span>${msg}</span>`;
+    }
+
+    function clearStatus() {
+      el.statusMsg.className = 'status-msg';
+      el.statusMsg.innerHTML = '';
+    }
+
+    function fmtBytes(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      return (b/1048576).toFixed(1) + ' MB';
+    }
+
+    function exportJson() {
+      if (!extractedData) return;
+      trigger(new Blob([JSON.stringify(extractedData, null, 2)], {type:'application/json'}), 'kitchen_data.json');
+    }
+
+    function exportCsv() {
+      if (!extractedData) return;
+      const rows = [
+        ...(extractedData.base_units  ||[]).map(u=>({...u,_type:'Base Unit'})),
+        ...(extractedData.wall_units  ||[]).map(u=>({...u,_type:'Wall Unit'})),
+        ...(extractedData.tall_units  ||[]).map(u=>({...u,_type:'Tall Unit'})),
+        ...(extractedData.appliances  ||[]).map(u=>({...u,_type:'Appliance'})),
+      ];
+      if (!rows.length) { alert('No unit data to export.'); return; }
+      const keys = ['_type','code','description','type','brand','width','height','depth','quantity','notes'];
+      const csv = [keys.join(','), ...rows.map(r => keys.map(k => JSON.stringify(r[k]||'')).join(','))].join('\n');
+      trigger(new Blob([csv],{type:'text/csv'}), 'kitchen_units.csv');
+    }
+
+    async function copyJson() {
+      if (!extractedData) return;
+      await navigator.clipboard.writeText(JSON.stringify(extractedData, null, 2));
+      const orig = el.btnCopy.innerHTML;
+      el.btnCopy.innerHTML = '✓ &nbsp;Copied!';
+      setTimeout(() => { el.btnCopy.innerHTML = orig; }, 2000);
+    }
+
+    function trigger(blob, name) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     }
   </script>
-
 </body>
 </html>
