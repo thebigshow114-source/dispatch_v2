@@ -561,18 +561,24 @@
         <div class="version-pill">v4.0</div>
       </div>
 
-      <div class="sb-group">
+      <div class="sb-group" id="keyGroup">
         <div class="sb-label">API Key</div>
-        <div class="key-field">
-          <input type="password" id="apiKey" class="key-input" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
-          <button class="key-toggle" id="keyEye" type="button">👁</button>
+        <div id="keyEnvNotice" style="display:none;padding:10px 13px;background:rgba(15,186,129,.07);border:1px solid rgba(15,186,129,.2);border-radius:10px;font-size:12px;color:var(--green);display:none;align-items:center;gap:8px;">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 7l3.5 3.5L11 3" stroke="#0fba81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Loaded from <code style="font-family:var(--mono);font-size:10px;opacity:.8">.env</code>
         </div>
-        <div class="key-foot">
-          <span class="key-hint">Free at <a href="https://console.groq.com" target="_blank">console.groq.com</a></span>
-          <span class="key-saved" id="keySaved">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4.5 8L8 3" stroke="#0fba81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Saved
-          </span>
+        <div id="keyInputWrap">
+          <div class="key-field">
+            <input type="password" id="apiKey" class="key-input" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
+            <button class="key-toggle" id="keyEye" type="button">👁</button>
+          </div>
+          <div class="key-foot">
+            <span class="key-hint">Free at <a href="https://console.groq.com" target="_blank">console.groq.com</a></span>
+            <span class="key-saved" id="keySaved">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4.5 8L8 3" stroke="#0fba81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Saved
+            </span>
+          </div>
         </div>
       </div>
 
@@ -678,6 +684,18 @@
   </div>
 
   <script>
+    /* ── Server config check ── */
+    let serverHasKey = false;
+    fetch('/api/config').then(r => r.json()).then(cfg => {
+      serverHasKey = cfg.hasServerKey;
+      if (serverHasKey) {
+        document.getElementById('keyInputWrap').style.display = 'none';
+        const notice = document.getElementById('keyEnvNotice');
+        notice.style.display = 'flex';
+        checkReady();
+      }
+    }).catch(() => {});
+
     /* ── DOM refs ── */
     const g = id => document.getElementById(id);
     const el = {
@@ -733,7 +751,8 @@
     }
 
     function checkReady() {
-      el.runBtn.disabled = !(currentFile && el.apiKey.value.trim().length > 15);
+      const keyOk = serverHasKey || el.apiKey.value.trim().length > 15;
+      el.runBtn.disabled = !(currentFile && keyOk);
     }
 
     /* ── Extraction ── */

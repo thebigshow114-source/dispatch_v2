@@ -71,8 +71,12 @@ RETURN THIS EXACT JSON STRUCTURE:
   "summary": ""
 }`;
 
+app.get('/api/config', (_req, res) => {
+  res.json({ hasServerKey: !!process.env.GROQ_API_KEY });
+});
+
 app.post('/api/extract', upload.single('pdf'), async (req, res) => {
-  const apiKey = req.body.apiKey;
+  const apiKey = process.env.GROQ_API_KEY || req.body.apiKey;
 
   if (!req.file) return res.status(400).json({ error: 'No PDF uploaded.' });
   if (!apiKey || apiKey.length < 16) return res.status(400).json({ error: 'Valid Groq API key required.' });
